@@ -1,44 +1,30 @@
 # 10주차 실습: SageMaker Python SDK 3.x로 Iris 파이프라인 구축·모델 등록·서버리스 배포
 
-> **강의용 개정안 / 2026-10-29**  
-> 기존 자료의 교육 목표(전처리 → 학습 → 평가 → 정확도 조건 분기 → 모델 등록 → 승인 → 추론)를 유지함. AWS 공식 SDK v3 예제의 `ScriptProcessor`, `ModelTrainer`, `ModelBuilder`, `Pipeline` 패턴을 기준으로 개정함. **실제 AWS 계정에서 종단간 실행 검증은 아직 수행하지 않았으므로, 수업 전 교수자 사전 실행 필수.**
 
 ## 1. 실습 목표
 
-- 6주차 Kubeflow Pipelines와 SageMaker Pipelines의 컴포넌트/Step, 아티팩트/S3, Run/Execution을 비교함.
+- Kubeflow Pipelines와 SageMaker Pipelines의 컴포넌트/Step, 아티팩트/S3, Run/Execution을 비교함.
 - Iris 데이터셋을 전처리·학습·평가하고 정확도가 기준 이상일 때만 모델 레지스트리에 등록함.
 - 서로 다른 `NEstimators` 및 `AccuracyThreshold`로 3회 실행하고 실행별 평가 결과와 등록 여부를 비교함.
-- 등록된 **특정 모델 버전**을 수동 승인한 뒤 서버리스 엔드포인트로 배포하고 삭제함.
+- 등록된 특정 모델 버전을 수동 승인한 뒤 서버리스 엔드포인트로 배포하고 삭제함.
 
 ## 2. 환경 및 사전 점검 (필수)
 
 | 항목 | 권장 설정 / 검증 항목 |
 |---|---|
 | 계정 | SageMaker Studio, Processing, Training, Model Registry, Serverless Inference 생성 권한 확인 |
-| 리전 | 현재 계정의 실제 리전 사용. `us-east-1` 강제하지 않음. 프로젝트 기반 Free 플랜은 시드니에 고정될 수 있음 |
 | Studio | JupyterLab 스페이스 `ml.t3.medium` (사용 가능할 때) |
-| 작업 인스턴스 | Processing/Training `ml.m5.large` **예시**. 리전별 지원 및 계정별 할당량 확인 후 변경 |
-| SDK | `sagemaker==3.26.0`을 **예시 검증 후보**로 고정. 설치 가능성과 API 동작 사전 검증 필요 |
+| 작업 인스턴스 | Processing/Training `ml.m5.large` 예시. 리전별 지원 및 계정별 할당량 확인 후 변경 |
+| SDK | `sagemaker==3.26.0`을 예시 검증 후보로 고정. 설치 가능성과 API 동작 사전 검증 필요 |
 | 이미지 | SageMaker scikit-learn `1.2-1` (공식 v3 예제의 이미지 검색 패턴 기준). 오래된 이미지이므로 수업 전 이미지 URI 조회·실행 테스트 필수 |
 | IAM | SageMaker 실행 역할의 S3, ECR, CloudWatch, SageMaker 작업 생성·모델 등록·배포 권한 확인 |
 
-**주의:** AWS 무료 크레딧은 모든 서비스 사용 권한이나 인스턴스 할당량을 보장하지 않음. Free 플랜의 서비스 접근이 제한되면 이 실습은 코드 수정으로 해결할 수 없음. 유료 플랜 전환을 학생에게 일괄 권고하지 말고 교수자 계정에서 먼저 검증함.
-
-### 실습 전 교수자 체크리스트
-
-- [ ] `get_caller_identity()`와 실제 리전 확인
-- [ ] Studio 스페이스 생성·시작 가능
-- [ ] `ml.m5.large` Processing / Training 할당량 각각 1 이상 또는 다른 지원 유형 확보
-- [ ] scikit-learn 학습 이미지 URI 조회 및 실제 컨테이너 시작 확인
-- [ ] `Pipeline.upsert()` 및 1회 실행 성공
-- [ ] 모델 레지스트리 버전 생성과 서버리스 엔드포인트 생성 가능
-- [ ] 실습 종료 후 엔드포인트, 모델, 스페이스 정리 검증
 
 ## 3. 비용 관리
 
 - Processing 2회 + Training 1회가 파이프라인 실행마다 발생함. 기본 3회 실행 시 총 9개 작업임.
 - `ml.m5.large`는 작업 시간만큼 과금되지만 Studio JupyterLab은 별도로 실행 시간 과금됨.
-- **서버리스 추론**은 사용량 기반이지만 엔드포인트 구성·로그·저장소 비용과 계정 할당량을 확인함.
+- 서버리스 추론은 사용량 기반이지만 엔드포인트 구성·로그·저장소 비용과 계정 할당량을 확인함.
 - 실시간 인스턴스 엔드포인트는 사용하지 않음. 실습 종료 즉시 서버리스 엔드포인트를 삭제함.
 - 실습 시작 전에 AWS Budgets 경보를 설정하고, 과금·크레딧 현황을 확인함. 예산 경보가 서비스를 자동으로 중단하지는 않음.
 - 가격은 리전·시점에 따라 달라지므로 수업자료에 고정된 금액을 확정 비용으로 기재하지 않음.
@@ -149,7 +135,7 @@ with open(f"{BASE}/evaluation/evaluation.json", "w") as f:
 print("accuracy:", accuracy)
 ```
 
-**실습 전 주의:** 이미지 내 Python이 `tarfile.extractall(filter=...)`를 지원하는지 확인함. 지원하지 않는 구형 런타임이라면 해당 이미지 사용을 재검토하거나 안전한 파일명 검증을 구현함. 임의로 `filter`만 제거하지 않음.
+실습 전 주의: 이미지 내 Python이 `tarfile.extractall(filter=...)`를 지원하는지 확인함. 지원하지 않는 구형 런타임이라면 해당 이미지 사용을 재검토하거나 안전한 파일명 검증을 구현함. 임의로 `filter`만 제거하지 않음.
 
 ## 6. Step 3 — 세션·리전·S3 준비
 
@@ -258,7 +244,7 @@ trainer = ModelTrainer(
 )
 ```
 
-**중요: 실행 차단 점검 항목** — 위 `ModelTrainer`에는 `train.py` 실행을 지정하는 `SourceCode` 설정이 아직 포함되지 않았습니다. SDK 3.26.0의 `SourceCode` 생성자와 스크립트 전달 방식은 설치된 SDK에서 확인한 후 다음 셀을 완성해야 합니다. 이 상태에서 `trainer.train()`을 실행하지 마십시오. 이 부분을 생략하면 SageMaker 컨테이너가 학생의 `train.py`를 실행하지 않을 수 있습니다.
+중요: 실행 차단 점검 항목 — 위 `ModelTrainer`에는 `train.py` 실행을 지정하는 `SourceCode` 설정이 아직 포함되지 않았습니다. SDK 3.26.0의 `SourceCode` 생성자와 스크립트 전달 방식은 설치된 SDK에서 확인한 후 다음 셀을 완성해야 합니다. 이 상태에서 `trainer.train()`을 실행하지 마십시오. 이 부분을 생략하면 SageMaker 컨테이너가 학생의 `train.py`를 실행하지 않을 수 있습니다.
 
 검증용:
 
@@ -357,7 +343,7 @@ step_condition = ConditionStep(
 )
 ```
 
-**차이점:** 원본은 `ModelMetrics`를 모델 패키지에 저장했음. 이 개정안의 기본 등록 셀은 지표 등록이 빠져 있으므로, *모델 레지스트리 화면에 정확도 지표가 표시되는 것*까지 교육 목표라면 v3 `ModelBuilder.register()`의 `model_metrics` 지원 인자 및 `MetricsSource` 객체를 사전 확인하고 추가해야 함. 다만 평가 JSON은 S3에 별도 저장됨.
+차이점: 원본은 `ModelMetrics`를 모델 패키지에 저장했음. 이 개정안의 기본 등록 셀은 지표 등록이 빠져 있으므로, *모델 레지스트리 화면에 정확도 지표가 표시되는 것*까지 교육 목표라면 v3 `ModelBuilder.register()`의 `model_metrics` 지원 인자 및 `MetricsSource` 객체를 사전 확인하고 추가해야 함. 다만 평가 JSON은 S3에 별도 저장됨.
 
 ## 12. Step 9 — 파이프라인 정의 및 실행
 
@@ -394,7 +380,7 @@ for execution in (execution2, execution3):
 - 실행 2: 트리 5개, 정확도 기준 0.85
 - 실행 3: 트리 100개, 정확도 기준 0.999 (등록 생략 가능)
 
-**중요:** 레지스트리에 등록된 모델만 조회하면 실행 3처럼 조건이 거짓인 결과는 비교할 수 없음. 각 Execution의 `Evaluate` 단계 S3 결과를 별도로 확인하고 표에 기재함.
+중요: 레지스트리에 등록된 모델만 조회하면 실행 3처럼 조건이 거짓인 결과는 비교할 수 없음. 각 Execution의 `Evaluate` 단계 S3 결과를 별도로 확인하고 표에 기재함.
 
 | Execution | NEstimators | AccuracyThreshold | Accuracy | 등록 여부 |
 |---|---:|---:|---:|---|
@@ -414,7 +400,7 @@ for p in packages:
     print(p["ModelPackageVersion"], p["ModelPackageArn"], p["ModelApprovalStatus"])
 ```
 
-**실습 안전장치:** 가장 최근 버전을 자동 승인하지 않음. 학생이 출력 결과를 확인한 후 배포할 버전 번호를 명시함.
+실습 안전장치: 가장 최근 버전을 자동 승인하지 않음. 학생이 출력 결과를 확인한 후 배포할 버전 번호를 명시함.
 
 ```python
 TARGET_VERSION = 1  # 실제 등록된 버전으로 수정
@@ -426,9 +412,9 @@ print("approved:", package_arn)
 
 ## 15. Step 12 — 승인된 모델 패키지로 서버리스 엔드포인트 생성
 
-이 단계는 **SDK 3.x에서 폐기된 `SKLearnModel`을 사용하지 않음**. 등록된 모델 패키지 ARN을 SageMaker `CreateModel` API의 `Containers=[{"ModelPackageName": ARN}]` 형태로 전달함. `boto3`는 SDK 3.x와 병행 가능한 AWS 공식 서비스 API 클라이언트임.
+이 단계는 SDK 3.x에서 폐기된 `SKLearnModel`을 사용하지 않음. 등록된 모델 패키지 ARN을 SageMaker `CreateModel` API의 `Containers=[{"ModelPackageName": ARN}]` 형태로 전달함. `boto3`는 SDK 3.x와 병행 가능한 AWS 공식 서비스 API 클라이언트임.
 
-> **실행 전:** 해당 계정의 Serverless Inference 지원 여부 및 `MaxConcurrency` 할당량 확인. 승인된 모델 패키지의 이미지와 추론 코드가 실제 CSV 입력을 처리할 수 있는지도 검증해야 함. `ModelBuilder.register()`가 모델 아티팩트와 추론 코드를 올바르게 패키징했는지 확인하지 않고 배포하지 않음.
+> 실행 전: 해당 계정의 Serverless Inference 지원 여부 및 `MaxConcurrency` 할당량 확인. 승인된 모델 패키지의 이미지와 추론 코드가 실제 CSV 입력을 처리할 수 있는지도 검증해야 함. `ModelBuilder.register()`가 모델 아티팩트와 추론 코드를 올바르게 패키징했는지 확인하지 않고 배포하지 않음.
 
 ```python
 from botocore.exceptions import ClientError
@@ -445,7 +431,7 @@ for action, name in [
     (sm.describe_endpoint, endpoint_name),
 ]:
     try:
-        action(**({"ModelName": name} if action == sm.describe_model else
+        action(({"ModelName": name} if action == sm.describe_model else
                   {"EndpointConfigName": name} if action == sm.describe_endpoint_config else
                   {"EndpointName": name}))
         raise RuntimeError(f"리소스가 이미 존재합니다: {name}. 정리 후 다시 실행하세요.")
@@ -494,7 +480,7 @@ response = runtime.invoke_endpoint(
 print(response["Body"].read().decode("utf-8"))
 ```
 
-**주의:** 서버리스 추론의 콜드 스타트로 초기 응답이 지연될 수 있음. 실패 시 CloudWatch 로그와 컨테이너 응답 형식을 확인함. `ModelBuilder.register()`에서 추론 스크립트 패키징이 누락되면 배포가 성공해도 호출이 실패할 수 있음.
+주의: 서버리스 추론의 콜드 스타트로 초기 응답이 지연될 수 있음. 실패 시 CloudWatch 로그와 컨테이너 응답 형식을 확인함. `ModelBuilder.register()`에서 추론 스크립트 패키징이 누락되면 배포가 성공해도 호출이 실패할 수 있음.
 
 ## 16. Step 13 — 과금 리소스 정리 (필수)
 
@@ -528,23 +514,7 @@ print("엔드포인트·설정·배포 모델 정리 완료")
 | 모델 등록 생략 | 정확도가 임계값보다 낮아 조건 분기에서 제외된 것인지 확인 |
 | 서버리스 추론 실패 | 추론 컨테이너 이미지, 모델 로딩 함수, 입력 `ContentType`, CloudWatch 로그 확인 |
 
-## 18. 강의 마무리
 
-- Kubeflow KFP의 컴포넌트/아티팩트/Run과 SageMaker의 Step/S3/Execution 대응 관계 설명
-- 평가 지표를 이용한 조건부 모델 등록의 MLOps 의미 확인
-- 학습 완료, 모델 등록, 모델 승인, 실제 배포는 서로 다른 단계임을 설명
-- AWS의 관리형 컴퓨팅도 작업 시간·할당량·권한·리전·과금 제약이 있음을 확인
-
-## 19. 검증 상태와 남은 작업 (학생 배포 전 필수)
-
-**이 문서는 SDK 3.x API에 맞춰 구조를 개정한 교수자 검토본이며, 완전 실행 검증본은 아님.** 다음 항목이 해결되어야 학생 배포용으로 확정할 수 있음.
-
-1. `ModelTrainer`에 `SourceCode` 설정을 추가하고 `train.py`가 실제 컨테이너에서 실행되는지 검증
-2. SDK 3.26.0의 `ConditionStep`, `PropertyFile`, `ModelBuilder.register()` 정확한 시그니처와 파이프라인 정의 직렬화 검증
-3. `ModelBuilder.register()`의 모델 아티팩트 및 추론 코드 패키징과 서버리스 CSV 추론 검증
-4. 사용 리전의 scikit-learn 이미지 및 `ml.m5.large` Processing/Training 할당량 검증
-5. Free 플랜에서 Studio, Processing, Training, Model Registry, Serverless 각각 생성 가능 여부 검증
-6. 실행별 정확도 자동 집계 및 ModelMetrics 등록 기능 보강
 
 ## 공식 참고자료
 

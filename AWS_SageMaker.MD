@@ -18,7 +18,6 @@
 | 실행 역할 | 도메인 빠른 설정 시 자동 생성되는 SageMaker 실행 역할 |
 | 데이터 | scikit-learn 내장 Iris 데이터셋 (150행) |
 
-> SDK 버전 주의: SageMaker Python SDK는 V3에서 `Estimator`, `Model`, `Predictor` 등의 인터페이스가 크게 바뀌었습니다. 이 실습 코드는 2.x 버전 기준이므로 반드시 Step 2에서 버전을 고정하세요. JupyterLab 기본 이미지에 V3가 설치되어 있어도 2.x로 덮어 설치하면 됩니다.
 
 ## 3. 비용 계획 (10·11주차 합산 $100 크레딧 기준)
 
