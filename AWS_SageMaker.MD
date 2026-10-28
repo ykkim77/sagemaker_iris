@@ -14,11 +14,11 @@
 | 항목 | 내용 |
 | 개발 환경 | SageMaker Studio의 JupyterLab 스페이스 (`ml.t3.medium`) |
 | 작업 인스턴스 | 전처리·평가 `ml.t3.medium`, 학습 `ml.m5.large` |
-| SDK | SageMaker Python SDK **2.x 버전 고정** |
+| SDK | SageMaker Python SDK 2.x 버전 고정 |
 | 실행 역할 | 도메인 빠른 설정 시 자동 생성되는 SageMaker 실행 역할 |
 | 데이터 | scikit-learn 내장 Iris 데이터셋 (150행) |
 
-> **SDK 버전 주의**: SageMaker Python SDK는 V3에서 `Estimator`, `Model`, `Predictor` 등의 인터페이스가 크게 바뀌었습니다. 이 실습 코드는 **2.x 버전 기준**이므로 반드시 Step 2에서 버전을 고정하세요. JupyterLab 기본 이미지에 V3가 설치되어 있어도 2.x로 덮어 설치하면 됩니다.
+> SDK 버전 주의: SageMaker Python SDK는 V3에서 `Estimator`, `Model`, `Predictor` 등의 인터페이스가 크게 바뀌었습니다. 이 실습 코드는 2.x 버전 기준이므로 반드시 Step 2에서 버전을 고정하세요. JupyterLab 기본 이미지에 V3가 설치되어 있어도 2.x로 덮어 설치하면 됩니다.
 
 ## 3. 비용 계획 (10·11주차 합산 $100 크레딧 기준)
 
@@ -28,37 +28,37 @@
 | 10 | 전처리·학습·평가 작업 (파이프라인 3회 실행) | $1 미만 |
 | 10 | 서버리스 추론 테스트 | $1 미만 |
 | 11 | Bedrock 모델 호출·임베딩·Knowledge Bases (저비용 벡터 저장소 사용) | $5 미만 |
-| | **목표**: 10주차 $5, 11주차 $10 이내 | 여유분 약 $85 |
+| | 목표: 10주차 $5, 11주차 $10 이내 | 여유분 약 $85 |
 
 - 위 금액은 공개 요금 기준의 추정치입니다. 실제 청구액은 리전과 시점에 따라 다를 수 있습니다.
-- **가장 큰 위험은 정리하지 않은 리소스입니다.** 예를 들어 `ml.m5.large` 실시간 엔드포인트를 한 달 켜 두면 약 $80으로 크레딧 대부분이 사라집니다. 이 실습은 실시간 엔드포인트를 쓰지 않고 서버리스 추론만 사용합니다.
+- 가장 큰 위험은 정리하지 않은 리소스입니다. 예를 들어 `ml.m5.large` 실시간 엔드포인트를 한 달 켜 두면 약 $80으로 크레딧 대부분이 사라집니다. 이 실습은 실시간 엔드포인트를 쓰지 않고 서버리스 추론만 사용합니다.
 
 ## 4. 사전 점검
 
-1. **할당량**: 신규 계정은 일부 인스턴스 유형의 할당량이 작을 수 있습니다. 작업이 `ResourceLimitExceeded` 오류로 실패하면 6절 문제 해결표를 참고하세요.
+1. 할당량: 신규 계정은 일부 인스턴스 유형의 할당량이 작을 수 있습니다. 작업이 `ResourceLimitExceeded` 오류로 실패하면 6절 문제 해결표를 참고하세요.
 
 ## 5. 실습 단계
 
 ### Step 1. SageMaker AI 도메인 생성
 
-1. AWS 콘솔에서 **Amazon SageMaker AI**를 엽니다.
-2. 왼쪽 메뉴 **도메인(Domains)** → **도메인 생성(Create domain)**을 클릭합니다.
-3. **단일 사용자용 설정(빠른 설정, Set up for single user)**을 선택합니다. 실행 역할과 사용자 프로필이 자동으로 만들어집니다.
-4. 생성이 끝나면(수 분 소요) 사용자 프로필에서 **Studio 열기**를 클릭합니다.
+1. AWS 콘솔에서 Amazon SageMaker AI를 엽니다.
+2. 왼쪽 메뉴 도메인(Domains) → 도메인 생성(Create domain)을 클릭합니다.
+3. 단일 사용자용 설정(빠른 설정, Set up for single user)을 선택합니다. 실행 역할과 사용자 프로필이 자동으로 만들어집니다.
+4. 생성이 끝나면(수 분 소요) 사용자 프로필에서 Studio 열기를 클릭합니다.
 
 
 
 ### Step 2. JupyterLab 스페이스 생성과 SDK 버전 고정
 
-1. Studio 왼쪽의 **JupyterLab** → **JupyterLab 스페이스 생성**을 클릭하고 이름을 `week10`으로 지정합니다.
-2. 인스턴스를 `ml.t3.medium`으로 선택하고 **스페이스 실행**을 누른 뒤 **열기**를 클릭합니다.
+1. Studio 왼쪽의 JupyterLab → JupyterLab 스페이스 생성을 클릭하고 이름을 `week10`으로 지정합니다.
+2. 인스턴스를 `ml.t3.medium`으로 선택하고 스페이스 실행을 누른 뒤 열기를 클릭합니다.
 3. 새 노트북(Python 3)을 만들고 첫 셀에서 SDK를 설치합니다.
 
 ```python
 %pip install -q "sagemaker>=2.200,<3"
 ```
 
-4. 메뉴 **Kernel → Restart Kernel**로 커널을 재시작한 뒤 버전을 확인합니다.
+4. 메뉴 Kernel → Restart Kernel로 커널을 재시작한 뒤 버전을 확인합니다.
 
 ```python
 import sagemaker
@@ -71,7 +71,7 @@ print(sagemaker.__version__)   # 2.x.x 가 출력되어야 함
 
 6주차의 컴포넌트 함수 본문을 스크립트 파일로 옮깁니다. 아래 셀을 차례로 실행하면 노트북과 같은 폴더에 파일이 생깁니다.
 
-**(1) 전처리: `preprocess.py`**
+(1) 전처리: `preprocess.py`
 
 ```python
 %%writefile preprocess.py
@@ -92,7 +92,7 @@ test.to_csv(f"{BASE}/test/test.csv", index=False)
 print(f"train={len(train)}, test={len(test)}")
 ```
 
-**(2) 학습: `train.py`**
+(2) 학습: `train.py`
 
 학습 작업에서 실행될 뿐 아니라, 서버리스 추론에서도 `model_fn`으로 모델을 불러오는 데 쓰입니다.
 
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     print(f"n_estimators={args.n_estimators}, 학습 완료")
 ```
 
-**(3) 평가: `evaluate.py`**
+(3) 평가: `evaluate.py`
 
 평가 결과를 `evaluation.json`에 씁니다. `metrics` 키는 조건 분기(ConditionStep)에서 읽고, `multiclass_classification_metrics` 키는 모델 레지스트리의 지표로 기록됩니다.
 
@@ -277,7 +277,7 @@ step_eval = ProcessingStep(
 
 ### Step 8. 모델 등록 단계와 조건 분기
 
-정확도가 `AccuracyThreshold` 이상이면 모델을 `iris-models` 그룹에 **승인 대기(PendingManualApproval)** 상태로 등록합니다. 평가 결과 파일은 모델 지표로 함께 기록됩니다.
+정확도가 `AccuracyThreshold` 이상이면 모델을 `iris-models` 그룹에 승인 대기(PendingManualApproval) 상태로 등록합니다. 평가 결과 파일은 모델 지표로 함께 기록됩니다.
 
 ```python
 from sagemaker.model_metrics import MetricsSource, ModelMetrics
@@ -358,10 +358,10 @@ execution.list_steps()
 
 ### Step 10. 실행 결과 확인
 
-1. Studio 왼쪽 메뉴 **Pipelines** → `iris-pipeline` → 실행 목록에서 방금 실행을 선택합니다.
+1. Studio 왼쪽 메뉴 Pipelines → `iris-pipeline` → 실행 목록에서 방금 실행을 선택합니다.
 2. 그래프에서 `Preprocess → Train → Evaluate → CheckAccuracy → RegisterModel-RegisterModel` 단계가 모두 성공(초록색)인지 확인합니다. (`ModelStep`은 내부적으로 `단계이름-RegisterModel`이라는 이름으로 표시됩니다.)
 3. `Evaluate` 단계를 클릭해 출력 S3 경로와 로그를 확인합니다.
-4. **Models → Model registry**(모델 레지스트리)에서 `iris-models` 그룹에 버전 1이 승인 대기 상태로 등록되었는지 확인합니다.
+4. Models → Model registry(모델 레지스트리)에서 `iris-models` 그룹에 버전 1이 승인 대기 상태로 등록되었는지 확인합니다.
 
 > 화면 메뉴 이름과 배치는 콘솔 업데이트에 따라 다를 수 있습니다.
 
@@ -402,7 +402,7 @@ for p in pkgs:
 
 ### Step 12. 모델 승인과 서버리스 추론 배포
 
-가장 최근에 등록된 모델 버전을 **승인(Approved)**한 뒤 서버리스 추론으로 배포합니다. "승인된 모델만 배포한다"는 운영 절차를 체험하는 단계입니다.
+가장 최근에 등록된 모델 버전을 승인(Approved)한 뒤 서버리스 추론으로 배포합니다. "승인된 모델만 배포한다"는 운영 절차를 체험하는 단계입니다.
 
 ```python
 latest = sm.list_model_packages(ModelPackageGroupName=MODEL_GROUP, SortBy="CreationTime",
@@ -438,26 +438,26 @@ print(predictor.predict([[5.1, 3.5, 1.4, 0.2], [6.7, 3.0, 5.2, 2.3]]))
 ```
 
 - 배포에는 수 분이 걸리고, 첫 예측은 콜드 스타트로 수십 초가 걸릴 수 있습니다.
-- `instance_type`을 지정하는 일반 배포(실시간 엔드포인트)는 **사용하지 마세요.** 요청이 없어도 시간 단위로 과금됩니다.
+- `instance_type`을 지정하는 일반 배포(실시간 엔드포인트)는 사용하지 마세요. 요청이 없어도 시간 단위로 과금됩니다.
 
 ### Step 13. 리소스 정리 (반드시 수행)
 
-**(1) 엔드포인트와 모델 삭제**
+(1) 엔드포인트와 모델 삭제
 
 ```python
 predictor.delete_endpoint()   # 엔드포인트와 엔드포인트 설정 삭제
 predictor.delete_model()      # 배포용으로 만든 모델 삭제
 ```
 
-**(2) 남은 엔드포인트가 없는지 확인**
+(2) 남은 엔드포인트가 없는지 확인
 
 ```python
 print(sm.list_endpoints()["Endpoints"])   # [] 이 출력되어야 함
 ```
 
-**(3) JupyterLab 스페이스 중지**: 노트북을 저장한 뒤 Studio의 JupyterLab 스페이스 목록에서 `week10`의 **중지(Stop)**를 클릭합니다. 스페이스를 켜 두면 사용하지 않아도 시간 단위로 과금됩니다.
+(3) JupyterLab 스페이스 중지: 노트북을 저장한 뒤 Studio의 JupyterLab 스페이스 목록에서 `week10`의 중지(Stop)를 클릭합니다. 스페이스를 켜 두면 사용하지 않아도 시간 단위로 과금됩니다.
 
-**(4) 유지하는 것과 다음 날 확인할 것**
+(4) 유지하는 것과 다음 날 확인할 것
 
 | 항목 | 처리 | 이유 |
 |---|---|---|
@@ -471,7 +471,7 @@ print(sm.list_endpoints()["Endpoints"])   # [] 이 출력되어야 함
 
 | 증상 | 확인·해결 |
 |---|---|
-| `ImportError` 또는 `Estimator`·`SKLearn` 관련 오류 | SDK V3가 설치된 상태. Step 2의 설치 명령 실행 후 **커널을 재시작**했는지 확인 |
+| `ImportError` 또는 `Estimator`·`SKLearn` 관련 오류 | SDK V3가 설치된 상태. Step 2의 설치 명령 실행 후 커널을 재시작했는지 확인 |
 | 작업이 `ResourceLimitExceeded`로 실패 | 신규 계정의 인스턴스 할당량 부족. Service Quotas → Amazon SageMaker에서 해당 인스턴스 유형(예: `ml.m5.large for training job usage`)의 할당량 증가를 요청하거나, 교수 시연으로 대체 |
 | `AccessDenied` 오류 | 실행 역할 권한 부족. 노트북에서 `role`이 빠른 설정으로 만든 SageMaker 실행 역할인지 확인 |
 | 단계가 실패(빨간색) | 그래프에서 실패한 단계를 클릭해 로그(CloudWatch) 확인. 스크립트의 파일 경로 오타가 가장 흔한 원인 |
