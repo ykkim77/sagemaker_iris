@@ -1,4 +1,4 @@
-# 10주차 실습: SageMaker Python SDK 3.x로 Iris 파이프라인 구축·모델 등록·서버리스 배포
+# 10주차 실습: SageMaker상에서 Iris 파이프라인 구축·모델 등록·서버리스 배포
 
 
 ## 1. 실습 목표
