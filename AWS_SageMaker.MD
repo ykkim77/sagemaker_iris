@@ -12,8 +12,6 @@
 ## 2. 실습 환경
 
 | 항목 | 내용 |
-|---|---|
-| 리전 | 미국 동부(버지니아 북부) `us-east-1` — 11주차 Bedrock 실습을 위해 리전을 미국 버지니아에서 합니다. |
 | 개발 환경 | SageMaker Studio의 JupyterLab 스페이스 (`ml.t3.medium`) |
 | 작업 인스턴스 | 전처리·평가 `ml.t3.medium`, 학습 `ml.m5.large` |
 | SDK | SageMaker Python SDK **2.x 버전 고정** |
