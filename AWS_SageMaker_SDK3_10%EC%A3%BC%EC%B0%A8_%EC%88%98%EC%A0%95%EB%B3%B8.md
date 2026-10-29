@@ -55,7 +55,7 @@ print("Account:", aws.client("sts").get_caller_identity()["Account"])
 assert aws.region_name, "AWS 리전이 지정되지 않음"
 ```
 
-> 설치 실패 시 다른 버전으로 임의 변경하지 않고 교수자가 검증한 버전을 전체 학생에게 동일하게 배포함. 설치 후 커널 재시작 필수.
+
 
 ## 5. Step 2 — 실습 스크립트 작성
 
@@ -189,7 +189,7 @@ print(input_uri)
 
 ```python
 FRAMEWORK = "1.2-1"   # 공식 v3 예제에서 사용된 이미지 버전; 최신 지원 여부 별도 확인
-INSTANCE_TYPE = "ml.m5.large"  # 교수자 사전 검증 후 변경 가능
+INSTANCE_TYPE = "ml.m5.large"  
 
 sklearn_image = image_uris.retrieve(
     framework="sklearn", region=region, version=FRAMEWORK,
@@ -388,7 +388,7 @@ execution1.wait(delay=30, max_attempts=90)
 print(execution1.list_steps())
 ```
 
-`train.py` 실행 설정을 완성하고 교수자가 정의 JSON을 검토한 뒤 실행함. `PropertyFile` 및 조건 분기는 해당 버전의 import 경로를 확인함.
+
 
 ## 13. Step 10 — 파라미터 변경 실행과 비교
 
@@ -549,9 +549,3 @@ print("엔드포인트·설정·배포 모델 정리 완료")
 - AWS SageMaker 할당량: https://docs.aws.amazon.com/general/latest/gr/sagemaker.html
 
 
-## 수정 이력 및 검증 범위
-
-- 2026-10-29: SDK 3.x 버전 조회를 `importlib.metadata.version()`으로 수정함.
-- `ModelTrainer`에 `SourceCode`를 연결하여 `train.py` 실행 설정 누락을 보완함.
-- 추론 CSV 처리 함수를 명시하고, 평가 모델 파일의 안전한 읽기 방식 및 엔드포인트 중복 검사 코드를 수정함.
-- **검증 범위:** Python 코드 블록의 정적 문법 검사 및 AWS SDK 3.x 공식 API 문서 대조. 실제 AWS 작업 생성·모델 패키지 등록·서버리스 배포는 실행 검증되지 않음. 특히 `ModelBuilder.register()`의 추론 코드 패키징, `SourceCode`와 파이프라인 파라미터의 조합, 동일 S3 출력 경로에서의 병렬 실행은 교수자 사전 검증이 필요함.
