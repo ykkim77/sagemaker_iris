@@ -209,10 +209,18 @@ from sagemaker.core.shapes import (
     ProcessingOutput, ProcessingS3Output,
 )
 from sagemaker.core.workflow.parameters import ParameterInteger, ParameterFloat
+from sagemaker.core.workflow.parameters import ParameterString, ParameterFloat
 from sagemaker.mlops.workflow.steps import ProcessingStep, TrainingStep
 
-n_estimators = ParameterInteger(name="NEstimators", default_value=100)
-accuracy_threshold = ParameterFloat(name="AccuracyThreshold", default_value=0.85)
+n_estimators = ParameterString(
+    name="NEstimators",
+    default_value="100"
+)
+accuracy_threshold = ParameterFloat(
+    name="AccuracyThreshold",
+    default_value=0.85
+)
+
 
 processor = ScriptProcessor(
     image_uri=sklearn_image,
@@ -252,24 +260,49 @@ step_prep = ProcessingStep(name="Preprocess", step_args=prep_args)
 ## 9. Step 6 — 학습 TrainingStep
 
 ```python
+
 from sagemaker.train import ModelTrainer
 from sagemaker.train.configs import Compute, InputData, SourceCode
+from sagemaker.mlops.workflow.steps import TrainingStep
 
-# train.py가 위치한 현재 디렉터리를 소스 패키지로 업로드함
-# ModelTrainer가 학습 컨테이너에서 train.py를 실행하도록 지정
+import os
+
+os.environ["SAGEMAKER_VALIDATE_ROLE"] = "false"
+
 trainer = ModelTrainer(
     training_image=sklearn_image,
-    source_code=SourceCode(source_dir=".", entry_script="train.py"),
+    source_code=SourceCode(
+        source_dir=".",
+        entry_script="train.py"
+    ),
     role=role,
-    compute=Compute(instance_type=INSTANCE_TYPE, instance_count=1),
-    hyperparameters={"n_estimators": n_estimators},
-    input_data_config=[InputData(
-        channel_name="train",
-        data_source=step_prep.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
-        content_type="text/csv",
-    )],
-    sagemaker_session=pipeline_session,
+    compute=Compute(
+        instance_type=INSTANCE_TYPE,
+        instance_count=1
+    ),
+    hyperparameters={
+        "n_estimators": n_estimators
+    },
+    input_data_config=[
+        InputData(
+            channel_name="train",
+            data_source=step_prep.properties
+                .ProcessingOutputConfig
+                .Outputs["train"]
+                .S3Output.S3Uri,
+            content_type="text/csv"
+        )
+    ],
+    sagemaker_session=pipeline_session
 )
+
+train_args = trainer.train()
+
+step_train = TrainingStep(
+    name="Train",
+    step_args=train_args
+)
+
 ```
 
 `SourceCode(source_dir=".", entry_script="train.py")`는 SDK 3.x 공식 문서에 기재된 방식임. 현재 디렉터리에 `train.py`가 존재하는지 확인하고, 학습 컨테이너에서 사용되는 Python 및 scikit-learn 버전은 사전 테스트함.
@@ -328,14 +361,16 @@ step_eval = ProcessingStep(name="Evaluate", step_args=eval_args, property_files=
 ## 11. Step 8 — 모델 등록 및 정확도 조건 분기
 
 ```python
+
 from sagemaker.serve.model_builder import ModelBuilder
 from sagemaker.mlops.workflow.model_step import ModelStep
-from sagemaker.core.workflow.condition_step import ConditionStep
+from sagemaker.mlops.workflow.condition_step import ConditionStep
 from sagemaker.core.workflow.conditions import ConditionGreaterThanOrEqualTo
 from sagemaker.core.workflow.functions import JsonGet
 
 MODEL_GROUP = "week11-iris-models"
 
+# 모델 등록 설정
 model_builder = ModelBuilder(
     s3_model_data_url=step_train.properties.ModelArtifacts.S3ModelArtifacts,
     image_uri=sklearn_image,
@@ -350,21 +385,29 @@ register_args = model_builder.register(
     inference_instances=[INSTANCE_TYPE],
     approval_status="PendingManualApproval",
 )
-step_register = ModelStep(name="RegisterModel", step_args=register_args)
 
+step_register = ModelStep(
+    name="RegisterModel",
+    step_args=register_args
+)
+
+# 정확도 조건 분기
 step_condition = ConditionStep(
     name="CheckAccuracy",
-    conditions=[ConditionGreaterThanOrEqualTo(
-        left=JsonGet(
-            step_name=step_eval.name,
-            property_file=eval_report,
-            json_path="metrics.accuracy.value",
-        ),
-        right=accuracy_threshold,
-    )],
+    conditions=[
+        ConditionGreaterThanOrEqualTo(
+            left=JsonGet(
+                step_name=step_eval.name,
+                property_file=eval_report,
+                json_path="metrics.accuracy.value",
+            ),
+            right=accuracy_threshold,
+        )
+    ],
     if_steps=[step_register],
     else_steps=[],
 )
+
 ```
 
 
